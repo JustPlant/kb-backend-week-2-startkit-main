@@ -16,7 +16,7 @@ async function makeRatingFile(path, array) {
       ratingArray.push(obj);
     }
   });
-  
+
   await fs.writeFile(path, JSON.stringify(ratingArray));
 }
 
