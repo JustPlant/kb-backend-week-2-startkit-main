@@ -1,18 +1,80 @@
 const fs = require("fs").promises;
 const { config } = require("../appModules/rating");
 const { getRandomGame } = require("../appModules/api");
+const { writeData } = require("../utils/data"); 
 
-async function gameRouteController(res) {
-  try {
-    const ratingFile = await fs.readFile(config.PATH_TO_RATING_FILE);
-    const data = JSON.parse(ratingFile);
-    const game = getRandomGame(data);
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify(game));
-  } catch (error) {
-    res.statusCode = 500;
-    res.end("Internal Server Error");
+const addGameController = async (req, res) => {
+  req.isNew = !Boolean(req.games.find(item => item.title === req.body.title));
+  if (req.isNew) {
+      const inArray = req.games.map(item => Number(item.id));
+      let maximalId;
+      if (inArray.length > 0) {
+        maximalId = Math.max(...inArray);
+      } else {
+        maximalId = 0;
+      }
+      req.updatedObject = {
+        id: maximalId + 1,
+        title: req.body.title,
+        image: req.body.image,
+        link: req.body.link,
+        description: req.body.description
+      };
+      req.games = [...req.games, req.updatedObject];
+  } else {
+      res.status(400);
+      res.send({ status: "error", message: "Игра с таким именем уже есть." });
+      return
   }
+  await writeData("./data/games.json", req.games)
+  res.send({
+      games: req.games, 
+      updated: req.updatedObject 
+  });
+}
+const gameRouteController = async (res) => {
+  const ratingFile = await fs.readFile(config.PATH_TO_RATING_FILE);
+  const data = JSON.parse(ratingFile);
+  const game = getRandomGame(data);
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(game));
 };
 
-module.exports = gameRouteController;
+const sendAllGames = async (req, res) => {
+  const games = await readData("./data/games.json");
+  if (!games) {
+    res.status(400);
+    res.send({
+      status: "error",
+      message: "Нет игр в базе данных. Добавьте игру."
+    });
+    return;
+  }
+  req.games = games;
+  res.send(req.games);
+};
+
+const deleteGame = async (req, res) => {
+
+    const id = Number(req.params.id);
+    
+    req.game = req.games.find((item) => item.id === id);
+    
+    const index = req.games.findIndex((item) => item.id === req.game.id);
+
+    req.games.splice(index, 1);
+    
+    await writeData("./data/games.json", req.games);
+
+    res.send({
+    games: req.games,
+    updated: req.game
+  });
+}
+
+module.exports = { 
+  addGameController,
+  sendAllGames,
+  deleteGame
+ };
+
