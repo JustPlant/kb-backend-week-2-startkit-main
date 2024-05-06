@@ -1,29 +1,20 @@
-const http = require("http");
+const express = require('express');
+const path = require('path');
+const bodyParser = require('body-parser');
+const mainRoute = require('./routes/main');
+const gamesRouter = require('./routes/games'); 
 
-const {
-  mainRouteController,
-  gameRouteController,
-  voteRouteController,
-  defaultRouteController,
-} = require("./controllers");
+const PORT = 3000;
+const app = express();
 
-const PORT = 3005;
+app.use(
+  bodyParser.json(),
+  express.static(path.join(__dirname, 'public')),
+  mainRoute,
+  gamesRouter
+);
 
-const server = http.createServer((req, res) => {
-  const url = req.url;
-  switch (url) {
-    case "/":
-      mainRouteController(res, "/index.html", ".html");
-      break;
-    case "/game":
-      gameRouteController(res);
-      break;
-    case "/vote":
-      voteRouteController(req, res);
-      break;
-    default:
-      defaultRouteController(res, url);
-  }
-});
+app.listen(PORT, () => {
+  console.log(`Server is running at PORT http://localhost:${PORT}`);
+})
 
-server.listen(PORT);
